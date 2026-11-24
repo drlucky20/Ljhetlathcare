@@ -45,7 +45,7 @@ function niceMax(v) {
   return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * p;
 }
 function chartSvg(c) {
-  const W = 700, H = 260, L = 54, R = 12, T = 12, B = 30;
+  const W = 700, H = 260, L = 76, R = 12, T = 12, B = 30;
   const all = c.series.flatMap((s) => s.values.filter((v) => v !== null));
   const max = niceMax(Math.max(0, ...all));
   const n = c.labels.length;
@@ -56,7 +56,7 @@ function chartSvg(c) {
     const v = (max * i) / 4;
     g += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end" font-size="11" fill="var(--muted)">${fmt(v)}</text>`;
   }
-  const step = Math.ceil(n / 8);
+  const step = n <= 12 ? 1 : Math.ceil(n / 8);
   c.labels.forEach((lb, i) => {
     if (i % step === 0 && (n - 1 - i >= step * 0.6 || i === n - 1)) {
       const t = c.mode === 'daily' ? lb.slice(5) : lb;
@@ -136,7 +136,7 @@ async function renderSection(sec, host, date) {
 function header() {
   const m = state.me;
   return `<header class="top"><div class="wrap"><img class="logo" src="/logo.png" alt="Doctor LJ Cosmetic Clinic">
-    <span class="who">${esc(m.name)} · ${esc(m.roleLabel)}</span>
+    <span class="who">${m.roleLabel.includes(m.name) ? '' : esc(m.name) + ' · '}${esc(m.roleLabel)}</span>
     <button id="pw" class="small">Change password</button><button id="out" class="small">Log out</button></div></header>`;
 }
 function bindHeader() {
