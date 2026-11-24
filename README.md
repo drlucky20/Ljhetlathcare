@@ -2,7 +2,7 @@
 
 Web app where each staff member logs in and enters their daily work; the Admin sees everything at the end of the day.
 
-**Roles:** Manager · Marketing Manager · Accountant (Ms. Nadeesha) · Accountant (Mr. Krishntha) · Oshani · Admin
+**Roles:** Manager · Marketing Manager · Accountant (Ms. Nadeesha) · Accountant (Mr. Krishntha) · Receptionist · Admin
 
 ## Run
 Needs Node.js 22.13+ (no npm install – zero dependencies).
@@ -25,3 +25,7 @@ Data is stored in `data/lj.db` (SQLite) – back it up. Put it behind HTTPS (coo
 
 ## Test
     npm test
+
+## Testing with simple passwords
+    SEED_PASSWORD=Test@12345 npm start   # first run only (empty data/ folder): every login gets this password
+Usernames: `admin`, `manager`, `marketing`, `nadeesha`, `krishntha`, `receptionist`. Change them before real use.

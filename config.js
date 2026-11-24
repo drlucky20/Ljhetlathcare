@@ -232,11 +232,11 @@ const roles = {
     ],
   },
 
-  oshani: {
-    label: 'Oshani – Customer Care',
+  receptionist: {
+    label: 'Receptionist',
     sections: [
       {
-        id: 'osh_customers', title: 'Customers updated today',
+        id: 'rec_customers', title: 'Customers updated today',
         fields: [
           f('customer', 'Customer name', 'text', { required: true }),
           f('phone', 'Phone'),
@@ -249,7 +249,7 @@ const roles = {
         },
       },
       {
-        id: 'osh_complaints', title: 'Customer complaints',
+        id: 'rec_complaints', title: 'Customer complaints',
         fields: [
           f('customer', 'Customer', 'text', { required: true }),
           f('complaint', 'Complaint', 'textarea', { required: true }),
@@ -258,7 +258,7 @@ const roles = {
         summary: [{ label: 'Complaints', agg: 'count' }],
       },
       {
-        id: 'osh_sales', title: 'Daily sale report & expenses',
+        id: 'rec_sales', title: 'Daily sale report & expenses',
         fields: [
           f('type', 'Type', 'select', { options: ['Sale', 'Expense'], required: true }),
           f('description', 'Description', 'text', { required: true }),
@@ -289,7 +289,7 @@ const seedUsers = [
   { username: 'marketing', name: 'Marketing Manager', role: 'marketing' },
   { username: 'nadeesha', name: 'Ms. Nadeesha', role: 'accountant1' },
   { username: 'krishntha', name: 'Mr. Krishntha', role: 'accountant2' },
-  { username: 'oshani', name: 'Oshani', role: 'oshani' },
+  { username: 'receptionist', name: 'Receptionist', role: 'receptionist' },
 ];
 
 const sectionIndex = {};

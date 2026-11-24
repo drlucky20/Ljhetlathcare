@@ -28,7 +28,7 @@ server.listen(0, async () => {
     const e = (await mgr('GET', `/api/entries?section=mgr_stats&date=${today}`)).body.entries;
     assert.equal(e.length, 1); assert.equal(e[0].data.calls, 50);
     assert.equal((await mgr('POST', '/api/entries', { section: 'mgr_stats', date: today, data: { calls: -1, appointments: 1 } })).status, 400);
-    assert.equal((await mgr('POST', '/api/entries', { section: 'osh_sales', date: today, data: { type: 'Sale', description: 'x', amount: 1 } })).status, 403); // other role's section
+    assert.equal((await mgr('POST', '/api/entries', { section: 'rec_sales', date: today, data: { type: 'Sale', description: 'x', amount: 1 } })).status, 403); // other role's section
     const chart = (await mgr('GET', `/api/chart?section=mgr_stats&end=${today}`)).body;
     assert.equal(chart.series[0].values.at(-1), 50);
 
@@ -38,9 +38,9 @@ server.listen(0, async () => {
     assert.equal(cmp.series.length, 4);
     assert.equal(cmp.series.find((s) => s.name === '2024').values[2], 700);
 
-    const osh = await mk('oshani');
-    await osh('POST', '/api/entries', { section: 'osh_sales', date: today, data: { type: 'Sale', description: 'a', amount: 300 } });
-    await osh('POST', '/api/entries', { section: 'osh_sales', date: today, data: { type: 'Expense', description: 'b', amount: 80 } });
+    const rec = await mk('receptionist');
+    await rec('POST', '/api/entries', { section: 'rec_sales', date: today, data: { type: 'Sale', description: 'a', amount: 300 } });
+    await rec('POST', '/api/entries', { section: 'rec_sales', date: today, data: { type: 'Expense', description: 'b', amount: 80 } });
     assert.equal((await mgr('GET', `/api/admin/day?date=${today}`)).status, 403);
 
     const adm = await mk('admin');

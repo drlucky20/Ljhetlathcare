@@ -52,7 +52,7 @@ function setPassword(id, password) {
 if (db.prepare('SELECT COUNT(*) c FROM users').get().c === 0) {
   const lines = [];
   for (const u of seedUsers) {
-    const password = crypto.randomBytes(7).toString('base64url');
+    const password = process.env.SEED_PASSWORD || crypto.randomBytes(7).toString('base64url');
     createUser({ ...u, password });
     lines.push(`${u.username.padEnd(12)} ${password.padEnd(12)} ${roles[u.role].label}`);
   }
