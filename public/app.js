@@ -135,7 +135,7 @@ async function renderSection(sec, host, date) {
 // ---------- shell ----------
 function header() {
   const m = state.me;
-  return `<header class="top"><div class="wrap"><span class="brand">LJ Healthcare</span>
+  return `<header class="top"><div class="wrap"><img class="logo" src="/logo.png" alt="Doctor LJ Cosmetic Clinic">
     <span class="who">${esc(m.name)} · ${esc(m.roleLabel)}</span>
     <button id="pw" class="small">Change password</button><button id="out" class="small">Log out</button></div></header>`;
 }
@@ -150,7 +150,7 @@ function bindHeader() {
 }
 
 function loginView() {
-  $app.innerHTML = `<div class="login card"><h1>LJ Healthcare</h1><p class="muted">Daily work dashboard – please log in</p>
+  $app.innerHTML = `<div class="login card"><img class="logo" src="/logo.png" alt="Doctor LJ Cosmetic Clinic"><p class="muted" style="text-align:center">Daily work dashboard – please log in</p>
     <div id="m"></div><form><label>Username<input type="text" name="u" autocomplete="username" autofocus required></label>
     <label>Password<input type="password" name="p" autocomplete="current-password" required></label>
     <button class="primary" style="width:100%;margin-top:6px">Log in</button></form></div>`;
