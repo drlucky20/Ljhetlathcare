@@ -1,0 +1,10 @@
+{
+  "name": "lj-daily-dashboard",
+  "version": "1.0.0",
+  "description": "LJ Healthcare - role based daily work dashboard with admin panel",
+  "main": "server.js",
+  "scripts": { "start": "node server.js", "test": "node test/smoke.js" },
+  "engines": { "node": ">=22.13" },
+  "license": "UNLICENSED",
+  "private": true
+}
