@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Car Race</title>
+<style>
+  html,body{margin:0;height:100%;background:#111;color:#fff;font-family:system-ui,sans-serif;overflow:hidden}
+  #wrap{position:relative;height:100%;display:flex;align-items:center;justify-content:center}
+  canvas{background:#2b2b2b;max-height:100%;max-width:100%;touch-action:none}
+  #msg{position:absolute;text-align:center;pointer-events:none;text-shadow:0 2px 6px #000}
+  #msg h1{margin:0 0 8px;font-size:40px}
+  #msg p{margin:4px;font-size:16px;opacity:.9}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c" width="400" height="640"></canvas>
+  <div id="msg"><h1>🏎️ Car Race</h1><p>← → / A D to steer · ↑ ↓ to speed up / brake</p><p>Touch: drag left/right</p><p><b>Press Space or tap to start</b></p></div>
+</div>
+<script>
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const msg = document.getElementById('msg');
+const W = cv.width, H = cv.height;
+const ROAD_X = 50, ROAD_W = 300, LANES = 3, LANE_W = ROAD_W / LANES;
+let state = 'ready', car, enemies, offset, score, best = +(localStorage.getItem('best') || 0), speed, spawnT, keys = {}, lastT = 0;
+
+function reset() {
+  car = { x: W/2 - 18, y: H - 120, w: 36, h: 64 };
+  enemies = []; offset = 0; score = 0; speed = 5; spawnT = 0;
+}
+reset();
+
+function start() {
+  if (state === 'running') return;
+  reset(); state = 'running'; msg.style.display = 'none';
+}
+function gameOver() {
+  state = 'over';
+  if (score > best) { best = Math.floor(score); localStorage.setItem('best', best); }
+  msg.innerHTML = `<h1>💥 Crash!</h1><p>Score: ${Math.floor(score)} · Best: ${best}</p><p><b>Press Space or tap to retry</b></p>`;
+  msg.style.display = 'block';
+}
+
+addEventListener('keydown', e => {
+  keys[e.key.toLowerCase()] = true;
+  if (e.key === ' ' || e.key === 'Enter') start();
+  if (e.key.startsWith('Arrow')) e.preventDefault();
+});
+addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+
+// touch / mouse: drag to steer
+let dragX = null;
+function pointer(e) {
+  const r = cv.getBoundingClientRect();
+  const p = e.touches ? e.touches[0] : e;
+  dragX = (p.clientX - r.left) * (W / r.width);
+}
+cv.addEventListener('pointerdown', e => { start(); pointer(e); });
+cv.addEventListener('pointermove', e => { if (e.buttons || e.pointerType === 'touch') pointer(e); });
+addEventListener('pointerup', () => dragX = null);
+msg.parentElement.addEventListener('pointerdown', start);
+
+function rects(a, b) { return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y; }
+
+function drawCar(x, y, w, h, color) {
+  ctx.fillStyle = '#000'; ctx.fillRect(x - 4, y + 8, 6, 16); ctx.fillRect(x + w - 2, y + 8, 6, 16);
+  ctx.fillRect(x - 4, y + h - 24, 6, 16); ctx.fillRect(x + w - 2, y + h - 24, 6, 16);
+  ctx.fillStyle = color; ctx.beginPath(); ctx.roundRect(x, y, w, h, 8); ctx.fill();
+  ctx.fillStyle = 'rgba(180,220,255,.85)'; ctx.fillRect(x + 6, y + 18, w - 12, 14);
+  ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fillRect(x + 6, y + 40, w - 12, 12);
+}
+
+function update(dt) {
+  if (state !== 'running') return;
+  const steer = 5 * dt;
+  if (keys['arrowleft'] || keys['a']) car.x -= steer;
+  if (keys['arrowright'] || keys['d']) car.x += steer;
+  if (dragX !== null) car.x += Math.max(-steer, Math.min(steer, dragX - car.w/2 - car.x));
+  if (keys['arrowup'] || keys['w']) speed = Math.min(speed + 0.08 * dt, 14);
+  if (keys['arrowdown'] || keys['s']) speed = Math.max(speed - 0.15 * dt, 3);
+  speed = Math.min(14, speed + 0.002 * dt);
+  car.x = Math.max(ROAD_X + 4, Math.min(ROAD_X + ROAD_W - car.w - 4, car.x));
+
+  offset = (offset + speed * dt) % 40;
+  score += speed * dt * 0.05;
+
+  spawnT -= dt;
+  if (spawnT <= 0) {
+    const lane = Math.floor(Math.random() * LANES);
+    const colors = ['#e53935', '#43a047', '#fdd835', '#8e24aa', '#fb8c00'];
+    enemies.push({ x: ROAD_X + lane * LANE_W + (LANE_W - 36) / 2, y: -80, w: 36, h: 64,
+      v: 1 + Math.random() * 2, c: colors[Math.floor(Math.random() * colors.length)] });
+    spawnT = Math.max(25, 80 - speed * 4) * (0.6 + Math.random() * 0.8);
+  }
+  for (const e of enemies) e.y += (speed - e.v + 2) * dt;
+  enemies = enemies.filter(e => e.y < H + 80);
+  for (const e of enemies) {
+    const hit = { x: car.x + 3, y: car.y + 3, w: car.w - 6, h: car.h - 6 };
+    if (rects(hit, e)) { gameOver(); return; }
+  }
+}
+
+function draw() {
+  ctx.fillStyle = '#2e7d32'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#3a3a3a'; ctx.fillRect(ROAD_X, 0, ROAD_W, H);
+  ctx.fillStyle = '#fff'; ctx.fillRect(ROAD_X - 4, 0, 4, H); ctx.fillRect(ROAD_X + ROAD_W, 0, 4, H);
+  for (let l = 1; l < LANES; l++)
+    for (let y = -40 + offset; y < H; y += 40) ctx.fillRect(ROAD_X + l * LANE_W - 2, y, 4, 20);
+  for (const e of enemies) drawCar(e.x, e.y, e.w, e.h, e.c);
+  drawCar(car.x, car.y, car.w, car.h, '#1e88e5');
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 16px system-ui';
+  ctx.fillText('Score ' + Math.floor(score), 10, 24);
+  ctx.fillText('Best ' + best, 10, 44);
+  ctx.textAlign = 'right'; ctx.fillText(Math.floor(speed * 20) + ' km/h', W - 10, 24); ctx.textAlign = 'left';
+}
+
+function loop(t) {
+  const dt = Math.min(2, (t - lastT) / 16.67 || 1); lastT = t;
+  update(dt); draw(); requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
