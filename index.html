@@ -3,123 +3,330 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-<title>Car Race</title>
+<title>World Tour Car Race</title>
 <style>
-  html,body{margin:0;height:100%;background:#111;color:#fff;font-family:system-ui,sans-serif;overflow:hidden}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:#0b1320;color:#fff;font-family:system-ui,sans-serif;overflow:hidden}
   #wrap{position:relative;height:100%;display:flex;align-items:center;justify-content:center}
-  canvas{background:#2b2b2b;max-height:100%;max-width:100%;touch-action:none}
-  #msg{position:absolute;text-align:center;pointer-events:none;text-shadow:0 2px 6px #000}
-  #msg h1{margin:0 0 8px;font-size:40px}
-  #msg p{margin:4px;font-size:16px;opacity:.9}
+  #game{position:relative;height:100%;max-height:100vh;aspect-ratio:480/640;max-width:100vw}
+  canvas{width:100%;height:100%;display:block;touch-action:none;background:#2b2b2b}
+  .screen{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;
+    background:linear-gradient(#0b1f3af2,#10263ff2);padding:14px;text-align:center;overflow:auto}
+  .screen.on{display:flex}
+  h1{margin:0;font-size:28px} h2{margin:12px 0 6px;font-size:14px;letter-spacing:1px;text-transform:uppercase;color:#ffd54f}
+  .sub{opacity:.85;font-size:13px;margin:4px 0;max-width:400px}
+  .row{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:450px}
+  .card{background:#1b3556;border:2px solid #2d5589;border-radius:10px;padding:7px 10px;min-width:78px;cursor:pointer;font-size:12px}
+  .card.sel{border-color:#ffd54f;background:#274a78}
+  .card.locked{opacity:.45;cursor:not-allowed}
+  .card b{display:block;font-size:13px}
+  .stage{min-width:136px;text-align:left}
+  .tab{font-size:14px;padding:8px 14px;text-align:center}
+  .fact{background:#16314f;border-left:4px solid #ffd54f;border-radius:8px;padding:10px 12px;text-align:left;font-size:13px;line-height:1.4;max-width:400px;margin:8px 0}
+  .btn{margin-top:12px;background:#ffd54f;color:#111;border:0;border-radius:10px;padding:12px 28px;font-size:18px;font-weight:700;cursor:pointer}
+  .btn.alt{background:#2d5589;color:#fff;font-size:14px;padding:8px 16px;margin-top:8px}
+  canvas.mini{width:64px;height:44px;display:block;margin:0 auto 4px;background:none}
 </style>
 </head>
 <body>
-<div id="wrap">
-  <canvas id="c" width="400" height="640"></canvas>
-  <div id="msg"><h1>🏎️ Car Race</h1><p>← → / A D to steer · ↑ ↓ to speed up / brake</p><p>Touch: drag left/right</p><p><b>Press Space or tap to start</b></p></div>
-</div>
+<div id="wrap"><div id="game">
+  <canvas id="c" width="480" height="640"></canvas>
+  <div id="menu" class="screen on"></div>
+  <div id="result" class="screen"></div>
+</div></div>
 <script>
-const cv = document.getElementById('c'), ctx = cv.getContext('2d');
-const msg = document.getElementById('msg');
-const W = cv.width, H = cv.height;
-const ROAD_X = 50, ROAD_W = 300, LANES = 3, LANE_W = ROAD_W / LANES;
-let state = 'ready', car, enemies, offset, score, best = +(localStorage.getItem('best') || 0), speed, spawnT, keys = {}, lastT = 0;
+/* ================= DATA ================= */
+// Each world = a country/city with its own 5 cars and 5 stages.
+// car[i] (i>=1) unlocks when stage i of that world is completed.
+const WORLDS = [
+{
+  id:'sydney', name:'Sydney, Australia', flag:'🇦🇺',
+  cars:[
+    { name:'City Hatch',     color:'#1e88e5', max:11, steer:4.4, accel:.05,  w:34,h:60, style:'std' },
+    { name:'Harbour Sedan',  color:'#43a047', max:12, steer:4.6, accel:.055, w:36,h:64, style:'std' },
+    { name:'Bondi Coupe',    color:'#fdd835', max:13, steer:5.0, accel:.06,  w:36,h:62, style:'stripe' },
+    { name:'Night Sports',   color:'#e53935', max:14, steer:5.5, accel:.07,  w:36,h:62, style:'sport' },
+    { name:'Opera Supercar', color:'#8e24aa', max:15, steer:6.2, accel:.08,  w:38,h:64, style:'sport' },
+  ],
+  stages:[
+    { name:'Circular Quay', target:1500, traffic:1.0, L:'#2f8fd8', R:'#2e7d32', sceneL:['opera','boat','wave'], sceneR:['tower','tree','house'],
+      intro:'Welcome to Sydney Harbour!',
+      fact:'The Sydney Opera House opened in 1973 and is a UNESCO World Heritage site. Circular Quay is the ferry hub of the harbour.',
+      tip:'Tip: ferries are a cheap, scenic way to see the harbour.' },
+    { name:'Harbour Bridge Run', target:2200, traffic:1.2, bridges:900, L:'#2a7fc4', R:'#2e7d32', sceneL:['boat','wave','opera'], sceneR:['tower','tree'],
+      intro:'Cross the Sydney Harbour Bridge!',
+      fact:'The Sydney Harbour Bridge opened in 1932 and is nicknamed “the Coathanger”. You can climb it with a guided BridgeClimb.',
+      tip:'Tip: the pedestrian walkway across the bridge is free.' },
+    { name:'Bondi Sunset', target:2800, traffic:1.45, tint:'rgba(255,120,30,.25)', L:'#3aa0d0', R:'#f0d9a0', sceneL:['wave','boat'], sceneR:['palm','umbrella','house'],
+      intro:'Golden hour at Bondi Beach!',
+      fact:'Bondi is one of the world’s most famous beaches. Always swim between the red and yellow flags, where lifesavers patrol.',
+      tip:'Tip: the Bondi to Coogee coastal walk is a highlight.' },
+    { name:'Darling Harbour Night', target:3400, traffic:1.7, bridges:1100, tint:'rgba(5,10,50,.55)', night:true, L:'#123a6b', R:'#1b5e20', sceneL:['boat','wave'], sceneR:['tower','tower','tree'],
+      intro:'Darling Harbour by night!',
+      fact:'Darling Harbour has restaurants, museums and an aquarium, and hosts regular fireworks and events.',
+      tip:'Tip: visit the Australian National Maritime Museum.' },
+    { name:'Opera House Grand Prix', target:4200, traffic:2.0, bridges:1000, tint:'rgba(5,5,40,.5)', night:true, L:'#0f3260', R:'#1b5e20', sceneL:['opera','boat','wave'], sceneR:['tower','tree'],
+      intro:'The final race — Opera House lights!',
+      fact:'Every year the Vivid Sydney festival lights up the Opera House and city with art and music.',
+      tip:'Tip: book Opera House tours ahead in peak season.' },
+  ]
+},
+{
+  id:'srilanka', name:'Sri Lanka', flag:'🇱🇰',
+  cars:[
+    { name:'Tuk-Tuk',        color:'#fbc02d', max:10, steer:4.6, accel:.05,  w:30,h:46, style:'tuk' },
+    { name:'Classic Minor',  color:'#80cbc4', max:11.5,steer:4.6,accel:.055, w:34,h:60, style:'std' },
+    { name:'Safari Jeep',    color:'#8d6e63', max:12.5,steer:4.9,accel:.06,  w:38,h:62, style:'jeep' },
+    { name:'Hill Country Van',color:'#ef5350',max:13.5,steer:5.3,accel:.07,  w:38,h:66, style:'stripe' },
+    { name:'Island Racer',   color:'#ff6f00', max:15, steer:6.0, accel:.08,  w:36,h:62, style:'sport' },
+  ],
+  stages:[
+    { name:'Colombo – Galle Face', target:1500, traffic:1.0, L:'#2f8fd8', R:'#3a7d44', sceneL:['wave','boat','wave'], sceneR:['lotus','palm','tower'],
+      intro:'Welcome to Colombo, Sri Lanka!',
+      fact:'Colombo is Sri Lanka’s commercial capital. Galle Face Green is a seafront promenade famous for sunsets, kite flying and street food, and the Lotus Tower is a city landmark.',
+      tip:'Tip: explore the Pettah markets and the Gangaramaya Temple.' },
+    { name:'Kandy – Temple of the Tooth', target:2200, traffic:1.2, L:'#3f8f6a', R:'#2e7d32', sceneL:['stupa','palm','tree'], sceneR:['temple','palm','tree'],
+      intro:'Kandy – the cultural capital!',
+      fact:'Kandy is a UNESCO World Heritage city. The Temple of the Sacred Tooth Relic is a major Buddhist pilgrimage site, and the Esala Perahera festival features decorated elephants and dancers.',
+      tip:'Tip: dress modestly and remove shoes at temples.' },
+    { name:'Sigiriya – Lion Rock', target:2800, traffic:1.45, tint:'rgba(255,170,40,.18)', L:'#4f8f3a', R:'#3a7d44', sceneL:['palm','tree','elephant'], sceneR:['rock','tree','elephant'],
+      intro:'Race beneath Lion Rock!',
+      fact:'Sigiriya is a 5th-century rock fortress rising about 200 m from the jungle, a UNESCO World Heritage site known for its ancient frescoes and water gardens.',
+      tip:'Tip: climb at sunrise to beat the heat and crowds.' },
+    { name:'Nuwara Eliya & Ella', target:3400, traffic:1.7, bridges:1100, bridge:'arch', tint:'rgba(200,225,235,.22)', L:'#6aa84f', R:'#38761d', sceneL:['tea','tea','tree'], sceneR:['tea','tea','house'],
+      intro:'Into the misty tea country!',
+      fact:'Sri Lanka’s hill country grows world-famous Ceylon tea. Nuwara Eliya is nicknamed “Little England”, and the train from Kandy to Ella is one of the world’s most scenic rides, passing the Nine Arch Bridge.',
+      tip:'Tip: buy tea direct from estates to support local growers.' },
+    { name:'Galle Fort & the South Coast', target:4200, traffic:2.0, tint:'rgba(255,110,40,.28)', L:'#1f77b4', R:'#f0d9a0', sceneL:['wave','boat','lighthouse'], sceneR:['palm','umbrella','temple'],
+      intro:'Sunset at Galle Fort!',
+      fact:'Galle Fort, built by the Portuguese in the 16th century and expanded by the Dutch, is a UNESCO World Heritage site. Nearby Mirissa is a top spot for responsible whale watching.',
+      tip:'Tip: choose whale-watching operators that follow the distance guidelines, and keep a safe distance from wild elephants.' },
+  ]
+}];
+const coming = ['Melbourne','Kyoto','Cape Town'];
 
-function reset() {
-  car = { x: W/2 - 18, y: H - 120, w: 36, h: 64 };
-  enemies = []; offset = 0; score = 0; speed = 5; spawnT = 0;
+/* ================= SAVE ================= */
+let save = { prog:{sydney:0,srilanka:0}, car:{sydney:0,srilanka:0}, world:0 };
+try { const s=JSON.parse(localStorage.getItem('worldRace2')||'null'); if(s) save=Object.assign(save,s);
+  else { const o=JSON.parse(localStorage.getItem('aussieRace')||'null'); if(o){ save.prog.sydney=o.done|0; save.car.sydney=o.car|0; } } } catch(e){}
+const persist=()=>{ try{ localStorage.setItem('worldRace2',JSON.stringify(save)); }catch(e){} };
+
+/* ================= UI ================= */
+const cv=document.getElementById('c'), ctx=cv.getContext('2d');
+const menu=document.getElementById('menu'), result=document.getElementById('result');
+const W=480,H=640,ROAD_X=90,ROAD_W=300,LANES=3,LANE_W=ROAD_W/LANES;
+let wi=Math.min(save.world|0,WORLDS.length-1), selStage=0;
+const WLD=()=>WORLDS[wi], done=()=>save.prog[WLD().id]|0;
+selStage=Math.min(done(),4);
+
+function carPreview(def){
+  const c=document.createElement('canvas'); c.width=64; c.height=44; c.className='mini';
+  const x=c.getContext('2d'); x.translate(32,22); x.rotate(Math.PI/2); x.translate(-def.w/2,-def.h/2);
+  paintCar(x,0,0,def.w,def.h,def.color,def.style); return c;
 }
-reset();
-
-function start() {
-  if (state === 'running') return;
-  reset(); state = 'running'; msg.style.display = 'none';
-}
-function gameOver() {
-  state = 'over';
-  if (score > best) { best = Math.floor(score); localStorage.setItem('best', best); }
-  msg.innerHTML = `<h1>💥 Crash!</h1><p>Score: ${Math.floor(score)} · Best: ${best}</p><p><b>Press Space or tap to retry</b></p>`;
-  msg.style.display = 'block';
-}
-
-addEventListener('keydown', e => {
-  keys[e.key.toLowerCase()] = true;
-  if (e.key === ' ' || e.key === 'Enter') start();
-  if (e.key.startsWith('Arrow')) e.preventDefault();
-});
-addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
-
-// touch / mouse: drag to steer
-let dragX = null;
-function pointer(e) {
-  const r = cv.getBoundingClientRect();
-  const p = e.touches ? e.touches[0] : e;
-  dragX = (p.clientX - r.left) * (W / r.width);
-}
-cv.addEventListener('pointerdown', e => { start(); pointer(e); });
-cv.addEventListener('pointermove', e => { if (e.buttons || e.pointerType === 'touch') pointer(e); });
-addEventListener('pointerup', () => dragX = null);
-msg.parentElement.addEventListener('pointerdown', start);
-
-function rects(a, b) { return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y; }
-
-function drawCar(x, y, w, h, color) {
-  ctx.fillStyle = '#000'; ctx.fillRect(x - 4, y + 8, 6, 16); ctx.fillRect(x + w - 2, y + 8, 6, 16);
-  ctx.fillRect(x - 4, y + h - 24, 6, 16); ctx.fillRect(x + w - 2, y + h - 24, 6, 16);
-  ctx.fillStyle = color; ctx.beginPath(); ctx.roundRect(x, y, w, h, 8); ctx.fill();
-  ctx.fillStyle = 'rgba(180,220,255,.85)'; ctx.fillRect(x + 6, y + 18, w - 12, 14);
-  ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fillRect(x + 6, y + 40, w - 12, 12);
+function showMenu(){
+  state='menu'; result.classList.remove('on'); menu.classList.add('on'); menu.innerHTML='';
+  const w=WLD(), d=done();
+  menu.insertAdjacentHTML('beforeend','<h1>🏎️ World Tour Race</h1><div class="sub">Race through famous places and discover them</div><h2>Choose destination</h2><div class="row" id="tabs"></div>');
+  const tabs=menu.querySelector('#tabs');
+  WORLDS.forEach((x,i)=>{ const t=document.createElement('div'); t.className='card tab'+(i===wi?' sel':''); t.textContent=`${x.flag} ${x.name}`;
+    t.onclick=()=>{ wi=i; save.world=i; persist(); selStage=Math.min(done(),4); showMenu(); }; tabs.appendChild(t); });
+  menu.insertAdjacentHTML('beforeend','<h2>Stages</h2><div class="row" id="stg"></div><h2>Garage</h2><div class="row" id="gar"></div>');
+  const stg=menu.querySelector('#stg'), gar=menu.querySelector('#gar');
+  w.stages.forEach((s,i)=>{ const ok=i<=d, c=document.createElement('div');
+    c.className='card stage'+(i===selStage?' sel':'')+(ok?'':' locked');
+    c.innerHTML=`<b>${ok?'':'🔒 '}${i+1}. ${s.name}</b>${s.target} m${i<4?` · unlocks ${w.cars[i+1].name}`:' · Final'}`;
+    c.onclick=()=>{ if(ok){ selStage=i; showMenu(); } }; stg.appendChild(c); });
+  w.cars.forEach((cr,i)=>{ const ok=i<=d, c=document.createElement('div');
+    c.className='card'+(i===save.car[w.id]?' sel':'')+(ok?'':' locked');
+    c.appendChild(carPreview(cr));
+    c.insertAdjacentHTML('beforeend',`<b>${cr.name}</b>${ok?`Top ${Math.round(cr.max*10)} km/h`:`🔒 Beat stage ${i}`}`);
+    c.onclick=()=>{ if(ok){ save.car[w.id]=i; persist(); showMenu(); } }; gar.appendChild(c); });
+  const go=document.createElement('button'); go.className='btn'; go.textContent=`Race: ${w.stages[selStage].name}`; go.onclick=startRace; menu.appendChild(go);
+  menu.insertAdjacentHTML('beforeend',`<div class="sub" style="margin-top:10px">Coming soon: ${coming.join(' · ')}</div><div class="sub">← → steer · ↑ boost · ↓ brake · or drag on touch</div>`);
 }
 
-function update(dt) {
-  if (state !== 'running') return;
-  const steer = 5 * dt;
-  if (keys['arrowleft'] || keys['a']) car.x -= steer;
-  if (keys['arrowright'] || keys['d']) car.x += steer;
-  if (dragX !== null) car.x += Math.max(-steer, Math.min(steer, dragX - car.w/2 - car.x));
-  if (keys['arrowup'] || keys['w']) speed = Math.min(speed + 0.08 * dt, 14);
-  if (keys['arrowdown'] || keys['s']) speed = Math.max(speed - 0.15 * dt, 3);
-  speed = Math.min(14, speed + 0.002 * dt);
-  car.x = Math.max(ROAD_X + 4, Math.min(ROAD_X + ROAD_W - car.w - 4, car.x));
+/* ================= GAME ================= */
+let state='menu', car, enemies, dist, speed, spawnT, lives, inv, offset, keys={}, dragX=null, lastT=0, stage, world, scen, shake, introT;
 
-  offset = (offset + speed * dt) % 40;
-  score += speed * dt * 0.05;
-
-  spawnT -= dt;
-  if (spawnT <= 0) {
-    const lane = Math.floor(Math.random() * LANES);
-    const colors = ['#e53935', '#43a047', '#fdd835', '#8e24aa', '#fb8c00'];
-    enemies.push({ x: ROAD_X + lane * LANE_W + (LANE_W - 36) / 2, y: -80, w: 36, h: 64,
-      v: 1 + Math.random() * 2, c: colors[Math.floor(Math.random() * colors.length)] });
-    spawnT = Math.max(25, 80 - speed * 4) * (0.6 + Math.random() * 0.8);
+function startRace(){
+  world=WLD(); stage=world.stages[selStage];
+  const def=world.cars[save.car[world.id]|0];
+  car={x:W/2-def.w/2,y:H-130,w:def.w,h:def.h,def};
+  enemies=[]; dist=0; speed=5; spawnT=30; lives=3; inv=0; offset=0; shake=0; introT=240; scen=[];
+  for(let y=-100;y<H;y+=110) addScenery(y);
+  menu.classList.remove('on'); result.classList.remove('on'); state='play';
+}
+function addScenery(y){
+  const side=Math.random()<.5?'L':'R', arr=side==='L'?stage.sceneL:stage.sceneR;
+  scen.push({side,kind:arr[(Math.random()*arr.length)|0],y,v:Math.random()});
+}
+function paintCar(g,x,y,w,h,color,style){
+  const wheel=(a,b)=>{ g.fillStyle='#000'; g.fillRect(a,b,6,16); };
+  if(style==='tuk'){
+    g.fillStyle='#000'; g.fillRect(x+w/2-3,y+2,6,12); g.fillRect(x-3,y+h-18,6,14); g.fillRect(x+w-3,y+h-18,6,14);
+    g.fillStyle=color; g.beginPath(); g.roundRect(x,y+8,w,h-8,8); g.fill();
+    g.fillStyle='#263238'; g.fillRect(x+3,y+h*.38,w-6,h*.52);          // canopy roof
+    g.fillStyle='rgba(180,220,255,.85)'; g.fillRect(x+5,y+14,w-10,8);   // windscreen
+    return;
   }
-  for (const e of enemies) e.y += (speed - e.v + 2) * dt;
-  enemies = enemies.filter(e => e.y < H + 80);
-  for (const e of enemies) {
-    const hit = { x: car.x + 3, y: car.y + 3, w: car.w - 6, h: car.h - 6 };
-    if (rects(hit, e)) { gameOver(); return; }
+  if(style==='bus'){
+    g.fillStyle='#000'; for(const yy of [y+10,y+h-26]){ g.fillRect(x-3,yy,5,16); g.fillRect(x+w-2,yy,5,16); }
+    g.fillStyle=color; g.beginPath(); g.roundRect(x,y,w,h,6); g.fill();
+    g.fillStyle='rgba(180,220,255,.8)'; for(let i=0;i<4;i++) g.fillRect(x+4,y+10+i*20,w-8,10);
+    g.fillStyle='#fff'; g.fillRect(x,y+h*.45,w,4); return;
+  }
+  for(const yy of [y+8,y+h-24]){ wheel(x-4,yy); wheel(x+w-2,yy); }
+  g.fillStyle=color; g.beginPath(); g.roundRect(x,y,w,h,style==='sport'?12:8); g.fill();
+  if(style==='jeep'){ g.fillStyle='#d7ccc8'; g.fillRect(x+3,y+22,w-6,26); g.fillStyle='#111'; g.fillRect(x+w/2-6,y+h-8,12,8); }
+  else { g.fillStyle='rgba(180,220,255,.85)'; g.fillRect(x+6,y+18,w-12,14); g.fillStyle='rgba(0,0,0,.25)'; g.fillRect(x+6,y+40,w-12,12); }
+  if(style==='stripe'||style==='sport'){ g.fillStyle='rgba(255,255,255,.55)'; g.fillRect(x+w/2-2,y+2,4,h-4); }
+  if(style==='sport'){ g.fillStyle='#111'; g.fillRect(x-2,y+h-6,w+4,5); }
+}
+
+function update(dt){
+  if(state!=='play') return;
+  const d=car.def, steer=d.steer*dt;
+  if(keys.arrowleft||keys.a) car.x-=steer;
+  if(keys.arrowright||keys.d) car.x+=steer;
+  if(dragX!==null) car.x+=Math.max(-steer,Math.min(steer,dragX-car.w/2-car.x));
+  if(keys.arrowup||keys.w) speed=Math.min(speed+d.accel*dt*2,d.max);
+  else if(keys.arrowdown||keys.s) speed=Math.max(speed-.15*dt,3);
+  else speed=Math.min(speed+d.accel*dt*.5,d.max*.7);
+  car.x=Math.max(ROAD_X+4,Math.min(ROAD_X+ROAD_W-car.w-4,car.x));
+  offset=(offset+speed*dt)%40; dist+=speed*dt*.1;
+  if(inv>0) inv-=dt; if(shake>0) shake-=dt; if(introT>0) introT-=dt;
+  for(const s of scen) s.y+=speed*dt; scen=scen.filter(s=>s.y<H+200);
+  if(!scen.length||scen[scen.length-1].y>110) addScenery(-120);
+
+  spawnT-=dt;
+  if(spawnT<=0){
+    const lane=Math.floor(Math.random()*LANES), r=Math.random(), sl=world.id==='srilanka';
+    const style=sl?(r<.45?'tuk':r<.65?'bus':'std'):'std';
+    const cols=sl?['#fbc02d','#e53935','#1e88e5','#43a047','#fff176','#ef6c00']:['#e53935','#43a047','#fdd835','#8e24aa','#fb8c00','#eceff1'];
+    const ew=style==='tuk'?30:style==='bus'?40:36, eh=style==='tuk'?46:style==='bus'?96:64;
+    enemies.push({x:ROAD_X+lane*LANE_W+(LANE_W-ew)/2,y:-eh-30,w:ew,h:eh,style,v:1+Math.random()*2.5,c:cols[(Math.random()*cols.length)|0]});
+    spawnT=Math.max(18,(75-speed*3)/stage.traffic)*(.6+Math.random()*.8);
+  }
+  for(const e of enemies) e.y+=(speed-e.v+2)*dt;
+  enemies=enemies.filter(e=>e.y<H+110);
+  if(inv<=0) for(const e of enemies){
+    const a={x:car.x+3,y:car.y+3,w:car.w-6,h:car.h-6};
+    if(a.x<e.x+e.w&&a.x+a.w>e.x&&a.y<e.y+e.h&&a.y+a.h>e.y){
+      lives--; inv=90; shake=15; speed=Math.max(4,speed*.5); e.y=H+300;
+      if(lives<=0) return finish(false);
+    }
+  }
+  if(dist>=stage.target) finish(true);
+}
+
+function finish(win){
+  state='end'; let html;
+  if(win){
+    const id=world.id, first=selStage===(save.prog[id]|0)&&selStage<4;
+    if(first){ save.prog[id]=selStage+1; persist(); }
+    const nc=first?world.cars[selStage+1]:null, last=selStage===4;
+    html=`<h1>🏁 Stage Complete!</h1><div class="sub">${stage.name}</div>
+      <h2>Did you know?</h2><div class="fact">${stage.fact}<br><b>${stage.tip}</b></div>
+      ${nc?`<h2>New car unlocked</h2><div class="card sel"><b>${nc.name}</b>Top ${Math.round(nc.max*10)} km/h</div>`:''}
+      ${last?`<div class="sub" style="margin-top:10px">You’ve conquered ${world.name}! Try another destination.</div>`:''}`;
+    if(!last) selStage++;
+  } else html=`<h1>💥 Wrecked!</h1><div class="sub">${stage.name} · ${Math.floor(dist)} / ${stage.target} m</div>`;
+  result.innerHTML=html+`<button class="btn" id="again">${win?'Continue':'Retry'}</button><button class="btn alt" id="mm">Destinations / Garage</button>`;
+  result.classList.add('on');
+  result.querySelector('#again').onclick=()=>win?showMenu():startRace();
+  result.querySelector('#mm').onclick=showMenu;
+}
+
+/* ---- drawing ---- */
+function drawScenery(s){
+  const x=s.side==='L'?10+s.v*30:ROAD_X+ROAD_W+16+s.v*30, y=s.y;
+  switch(s.kind){
+    case 'opera': ctx.fillStyle='#f5f0e6'; for(let i=0;i<3;i++){ ctx.beginPath(); ctx.moveTo(x+i*18,y+50); ctx.quadraticCurveTo(x+i*18-10,y+10,x+i*18+30,y); ctx.quadraticCurveTo(x+i*18+22,y+30,x+i*18+34,y+50); ctx.fill(); }
+      ctx.fillStyle='#c9b99a'; ctx.fillRect(x-4,y+48,70,10); break;
+    case 'boat': ctx.fillStyle='#fff'; ctx.beginPath(); ctx.moveTo(x,y+30); ctx.lineTo(x+40,y+30); ctx.lineTo(x+30,y+44); ctx.lineTo(x+8,y+44); ctx.fill();
+      ctx.fillStyle='#e53935'; ctx.fillRect(x+18,y+10,4,20); ctx.fillStyle='#ffd54f'; ctx.fillRect(x+22,y+12,14,10); break;
+    case 'wave': ctx.strokeStyle='rgba(255,255,255,.35)'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(x,y+20); ctx.quadraticCurveTo(x+12,y+8,x+24,y+20); ctx.quadraticCurveTo(x+36,y+32,x+48,y+20); ctx.stroke(); break;
+    case 'tower': ctx.fillStyle=stage.night?'#27374d':'#7b8fa6'; ctx.fillRect(x,y,50,70);
+      ctx.fillStyle=stage.night?'#ffd54f':'#cfe3f5'; for(let i=0;i<4;i++) for(let j=0;j<3;j++) ctx.fillRect(x+6+j*14,y+6+i*16,8,9); break;
+    case 'house': ctx.fillStyle='#d2691e'; ctx.fillRect(x,y+14,44,34); ctx.fillStyle='#8b3a0e'; ctx.beginPath(); ctx.moveTo(x-4,y+16); ctx.lineTo(x+22,y); ctx.lineTo(x+48,y+16); ctx.fill(); break;
+    case 'tree': ctx.fillStyle='#1b5e20'; ctx.beginPath(); ctx.arc(x+20,y+20,18,0,7); ctx.fill(); ctx.fillStyle='#5d4037'; ctx.fillRect(x+18,y+36,4,10); break;
+    case 'palm': ctx.strokeStyle='#6d4c41'; ctx.lineWidth=4; ctx.beginPath(); ctx.moveTo(x+20,y+50); ctx.lineTo(x+22,y+14); ctx.stroke();
+      ctx.fillStyle='#2e9e4f'; for(let a=0;a<6;a++){ ctx.beginPath(); ctx.ellipse(x+22+Math.cos(a)*14,y+14+Math.sin(a)*8,14,4,a,0,7); ctx.fill(); } break;
+    case 'umbrella': ctx.fillStyle=['#e53935','#fdd835','#29b6f6'][(s.v*3)|0]; ctx.beginPath(); ctx.arc(x+20,y+20,16,Math.PI,0); ctx.fill(); ctx.fillStyle='#fff'; ctx.fillRect(x+19,y+20,2,20); break;
+    // --- Sri Lanka ---
+    case 'lotus': ctx.fillStyle='#e8e0f0'; ctx.fillRect(x+18,y+20,8,50); ctx.fillStyle='#c86fb0'; // lotus-bud tower
+      ctx.beginPath(); ctx.ellipse(x+22,y+14,14,20,0,0,7); ctx.fill(); ctx.fillStyle='#f4a6d7'; ctx.beginPath(); ctx.ellipse(x+22,y+14,7,16,0,0,7); ctx.fill(); break;
+    case 'stupa': ctx.fillStyle='#fafafa'; ctx.beginPath(); ctx.arc(x+26,y+44,26,Math.PI,0); ctx.fill(); ctx.fillRect(x+22,y+8,8,12);
+      ctx.fillStyle='#ffd54f'; ctx.fillRect(x+24,y,4,10); break;
+    case 'temple': ctx.fillStyle='#f3e5c0'; ctx.fillRect(x,y+24,54,28); ctx.fillStyle='#b5651d'; ctx.beginPath(); ctx.moveTo(x-6,y+26); ctx.lineTo(x+27,y+4); ctx.lineTo(x+60,y+26); ctx.fill();
+      ctx.fillStyle='#ffd54f'; ctx.fillRect(x+24,y,6,6); break;
+    case 'rock': ctx.fillStyle='#8d6e63'; ctx.beginPath(); ctx.moveTo(x-6,y+70); ctx.lineTo(x+4,y+24); ctx.lineTo(x+16,y+14); ctx.lineTo(x+40,y+14); ctx.lineTo(x+54,y+30); ctx.lineTo(x+62,y+70); ctx.fill();
+      ctx.fillStyle='#4f8f3a'; ctx.fillRect(x+14,y+10,30,6); break;
+    case 'elephant': ctx.fillStyle='#78909c'; ctx.beginPath(); ctx.ellipse(x+22,y+26,18,12,0,0,7); ctx.fill(); ctx.beginPath(); ctx.arc(x+8,y+22,8,0,7); ctx.fill();
+      ctx.fillRect(x-2,y+22,5,18); ctx.fillStyle='#546e7a'; ctx.fillRect(x+10,y+34,5,10); ctx.fillRect(x+28,y+34,5,10); break;
+    case 'tea': ctx.fillStyle='#2e8b3d'; for(let i=0;i<4;i++){ ctx.beginPath(); ctx.ellipse(x+24,y+8+i*13,26,5,0,0,7); ctx.fill(); }
+      ctx.fillStyle='#1c6b2a'; for(let i=0;i<4;i++) ctx.fillRect(x+2,y+11+i*13,44,2); break;
+    case 'lighthouse': ctx.fillStyle='#fafafa'; ctx.beginPath(); ctx.moveTo(x+8,y+60); ctx.lineTo(x+14,y+14); ctx.lineTo(x+30,y+14); ctx.lineTo(x+36,y+60); ctx.fill();
+      ctx.fillStyle='#e53935'; ctx.fillRect(x+12,y+32,22,6); ctx.fillStyle='#ffd54f'; ctx.fillRect(x+14,y+6,16,8); break;
   }
 }
-
-function draw() {
-  ctx.fillStyle = '#2e7d32'; ctx.fillRect(0, 0, W, H);
-  ctx.fillStyle = '#3a3a3a'; ctx.fillRect(ROAD_X, 0, ROAD_W, H);
-  ctx.fillStyle = '#fff'; ctx.fillRect(ROAD_X - 4, 0, 4, H); ctx.fillRect(ROAD_X + ROAD_W, 0, 4, H);
-  for (let l = 1; l < LANES; l++)
-    for (let y = -40 + offset; y < H; y += 40) ctx.fillRect(ROAD_X + l * LANE_W - 2, y, 4, 20);
-  for (const e of enemies) drawCar(e.x, e.y, e.w, e.h, e.c);
-  drawCar(car.x, car.y, car.w, car.h, '#1e88e5');
-  ctx.fillStyle = '#fff'; ctx.font = 'bold 16px system-ui';
-  ctx.fillText('Score ' + Math.floor(score), 10, 24);
-  ctx.fillText('Best ' + best, 10, 44);
-  ctx.textAlign = 'right'; ctx.fillText(Math.floor(speed * 20) + ' km/h', W - 10, 24); ctx.textAlign = 'left';
+function drawBridges(){
+  if(!stage.bridges) return;
+  const period=stage.bridges, pos=(dist*10)%period;
+  if(pos>=80) return;
+  const y=pos*(H+60)/80-60;
+  if(stage.bridge==='arch'){ // Nine Arch style stone viaduct
+    ctx.fillStyle='rgba(176,160,130,.95)'; ctx.fillRect(0,y,W,30);
+    ctx.fillStyle='rgba(0,0,0,.35)'; for(let x=6;x<W;x+=40){ ctx.beginPath(); ctx.arc(x+14,y+30,12,Math.PI,0); ctx.fill(); }
+    ctx.fillStyle='#6d4c41'; ctx.fillRect(0,y,W,4); return;
+  }
+  ctx.fillStyle='rgba(90,100,110,.92)'; ctx.fillRect(0,y,W,26);
+  ctx.strokeStyle='#cfd8dc'; ctx.lineWidth=3; ctx.beginPath(); for(let x=0;x<W;x+=24){ ctx.moveTo(x,y); ctx.lineTo(x+12,y+26); ctx.lineTo(x+24,y); } ctx.stroke();
+  ctx.fillStyle='#455a64'; ctx.fillRect(ROAD_X-14,y-4,14,34); ctx.fillRect(ROAD_X+ROAD_W,y-4,14,34);
 }
-
-function loop(t) {
-  const dt = Math.min(2, (t - lastT) / 16.67 || 1); lastT = t;
-  update(dt); draw(); requestAnimationFrame(loop);
+function wrap(text,maxW){ const words=text.split(' '),lines=[]; let l=''; for(const w of words){ const t=l?l+' '+w:w; if(ctx.measureText(t).width>maxW){ lines.push(l); l=w; } else l=t; } lines.push(l); return lines; }
+function draw(){
+  ctx.save();
+  if(shake>0) ctx.translate((Math.random()-.5)*8,(Math.random()-.5)*8);
+  ctx.fillStyle=stage?stage.L:'#2f8fd8'; ctx.fillRect(0,0,ROAD_X,H);
+  ctx.fillStyle=stage?stage.R:'#2e7d32'; ctx.fillRect(ROAD_X+ROAD_W,0,W-ROAD_X-ROAD_W,H);
+  ctx.fillStyle='#3a3a3a'; ctx.fillRect(ROAD_X,0,ROAD_W,H);
+  ctx.fillStyle='#fff'; ctx.fillRect(ROAD_X-4,0,4,H); ctx.fillRect(ROAD_X+ROAD_W,0,4,H);
+  for(let l=1;l<LANES;l++) for(let y=-40+offset;y<H;y+=40) ctx.fillRect(ROAD_X+l*LANE_W-2,y,4,20);
+  if(scen) for(const s of scen) drawScenery(s);
+  if(enemies) for(const e of enemies) paintCar(ctx,e.x,e.y,e.w,e.h,e.c,e.style);
+  if(car&&!(inv>0&&((inv/6)|0)%2)) paintCar(ctx,car.x,car.y,car.w,car.h,car.def.color,car.def.style);
+  if(stage) drawBridges();
+  if(stage&&stage.tint){ ctx.fillStyle=stage.tint; ctx.fillRect(0,0,W,H); }
+  if(stage&&stage.night&&car){ const g=ctx.createRadialGradient(car.x+car.w/2,car.y-20,10,car.x+car.w/2,car.y-60,150);
+    g.addColorStop(0,'rgba(255,240,180,.35)'); g.addColorStop(1,'rgba(255,240,180,0)'); ctx.fillStyle=g; ctx.fillRect(0,0,W,H); }
+  ctx.restore();
+  if(state==='play'||state==='end'){
+    ctx.fillStyle='rgba(0,0,0,.45)'; ctx.fillRect(0,0,W,34);
+    ctx.fillStyle='#fff'; ctx.font='bold 14px system-ui'; ctx.textAlign='left'; ctx.fillText(stage.name,10,22);
+    ctx.textAlign='center'; ctx.fillText('❤'.repeat(Math.max(0,lives)),W/2+90,22);
+    ctx.textAlign='right'; ctx.fillText(`${Math.floor(speed*10)} km/h`,W-10,22);
+    ctx.fillStyle='rgba(0,0,0,.45)'; ctx.fillRect(10,40,W-20,8);
+    ctx.fillStyle='#ffd54f'; ctx.fillRect(10,40,(W-20)*Math.min(1,dist/stage.target),8);
+    if(introT>0&&state==='play'){
+      ctx.globalAlpha=Math.min(1,introT/40); ctx.fillStyle='rgba(0,0,0,.6)'; ctx.fillRect(20,90,W-40,70);
+      ctx.fillStyle='#ffd54f'; ctx.textAlign='center'; ctx.font='bold 20px system-ui'; ctx.fillText(stage.intro,W/2,122);
+      ctx.fillStyle='#fff'; ctx.font='13px system-ui'; ctx.fillText(`${world.flag} ${stage.name} · ${stage.target} m`,W/2,146); ctx.globalAlpha=1;
+    }
+  }
 }
-requestAnimationFrame(loop);
+function loop(t){ const dt=Math.min(2,(t-lastT)/16.67||1); lastT=t; update(dt); draw(); requestAnimationFrame(loop); }
+
+/* ---- input ---- */
+addEventListener('keydown',e=>{ keys[e.key.toLowerCase()]=true; if(e.key.startsWith('Arrow')) e.preventDefault(); });
+addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+function pointer(e){ const r=cv.getBoundingClientRect(); dragX=(e.clientX-r.left)*(W/r.width); }
+cv.addEventListener('pointerdown',pointer);
+cv.addEventListener('pointermove',e=>{ if(e.buttons||e.pointerType==='touch') pointer(e); });
+addEventListener('pointerup',()=>dragX=null);
+
+showMenu(); requestAnimationFrame(loop);
 </script>
 </body>
 </html>
