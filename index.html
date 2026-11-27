@@ -20,7 +20,7 @@
   .card.sel{border-color:#ffd54f;background:#274a78}
   .card.locked{opacity:.45;cursor:not-allowed}
   .card b{display:block;font-size:13px}
-  .stage{min-width:136px;text-align:left}
+  .stage{min-width:136px;max-width:210px;text-align:left}
   .tab{font-size:14px;padding:8px 14px;text-align:center}
   .fact{background:#16314f;border-left:4px solid #ffd54f;border-radius:8px;padding:10px 12px;text-align:left;font-size:13px;line-height:1.4;max-width:400px;margin:8px 0}
   .btn{margin-top:12px;background:#ffd54f;color:#111;border:0;border-radius:10px;padding:12px 28px;font-size:18px;font-weight:700;cursor:pointer}
@@ -42,67 +42,118 @@ const WORLDS = [
 {
   id:'sydney', name:'Sydney, Australia', flag:'🇦🇺',
   cars:[
-    { name:'City Hatch',     color:'#1e88e5', max:11, steer:4.4, accel:.05,  w:34,h:60, style:'std' },
-    { name:'Harbour Sedan',  color:'#43a047', max:12, steer:4.6, accel:.055, w:36,h:64, style:'std' },
-    { name:'Bondi Coupe',    color:'#fdd835', max:13, steer:5.0, accel:.06,  w:36,h:62, style:'stripe' },
-    { name:'Night Sports',   color:'#e53935', max:14, steer:5.5, accel:.07,  w:36,h:62, style:'sport' },
-    { name:'Opera Supercar', color:'#8e24aa', max:15, steer:6.2, accel:.08,  w:38,h:64, style:'sport' },
+    { name:'City Hatch',     color:'#1e88e5', max:11,   steer:4.4, accel:.05,  w:34,h:60, style:'std',    need:0 },
+    { name:'Harbour Sedan',  color:'#43a047', max:12,   steer:4.6, accel:.055, w:36,h:64, style:'std',    need:2 },
+    { name:'Bondi Coupe',    color:'#fdd835', max:13,   steer:5.0, accel:.06,  w:36,h:62, style:'stripe', need:4 },
+    { name:'Night Sports',   color:'#e53935', max:14,   steer:5.5, accel:.07,  w:36,h:62, style:'sport',  need:6 },
+    { name:'Opera Supercar', color:'#8e24aa', max:15,   steer:6.2, accel:.08,  w:38,h:64, style:'sport',  need:8 },
   ],
   stages:[
-    { name:'Circular Quay', target:1500, traffic:1.0, L:'#2f8fd8', R:'#2e7d32', sceneL:['opera','boat','wave'], sceneR:['tower','tree','house'],
+    { name:'Royal Botanic Garden', L:'#3f9f4f', R:'#2e7d32', sceneL:['tree','palm','tree'], sceneR:['tree','tree','house'],
+      intro:'Warm-up lap through the gardens!',
+      fact:'The Royal Botanic Garden opened in 1816 and is Australia’s oldest botanic garden. Entry is free, and Mrs Macquarie’s Chair has a classic harbour view.',
+      tip:'Tip: walk the harbour foreshore path at sunrise.' },
+    { name:'Circular Quay', L:'#2f8fd8', R:'#2e7d32', sceneL:['opera','boat','wave'], sceneR:['tower','tree','house'],
       intro:'Welcome to Sydney Harbour!',
       fact:'The Sydney Opera House opened in 1973 and is a UNESCO World Heritage site. Circular Quay is the ferry hub of the harbour.',
       tip:'Tip: ferries are a cheap, scenic way to see the harbour.' },
-    { name:'Harbour Bridge Run', target:2200, traffic:1.2, bridges:900, L:'#2a7fc4', R:'#2e7d32', sceneL:['boat','wave','opera'], sceneR:['tower','tree'],
+    { name:'Manly Beach', L:'#35a0d8', R:'#f0d9a0', sceneL:['wave','boat'], sceneR:['palm','umbrella','house'],
+      intro:'Ferry across to Manly!',
+      fact:'Manly is reached by a ferry ride of roughly 30 minutes from Circular Quay, and is known for its surf beach and relaxed seaside village.',
+      tip:'Tip: swim only between the red and yellow flags.' },
+    { name:'Harbour Bridge Run', bridges:900, L:'#2a7fc4', R:'#2e7d32', sceneL:['boat','wave','opera'], sceneR:['tower','tree'],
       intro:'Cross the Sydney Harbour Bridge!',
       fact:'The Sydney Harbour Bridge opened in 1932 and is nicknamed “the Coathanger”. You can climb it with a guided BridgeClimb.',
       tip:'Tip: the pedestrian walkway across the bridge is free.' },
-    { name:'Bondi Sunset', target:2800, traffic:1.45, tint:'rgba(255,120,30,.25)', L:'#3aa0d0', R:'#f0d9a0', sceneL:['wave','boat'], sceneR:['palm','umbrella','house'],
+    { name:'Bondi Sunset', tint:'rgba(255,120,30,.25)', L:'#3aa0d0', R:'#f0d9a0', sceneL:['wave','boat'], sceneR:['palm','umbrella','house'],
       intro:'Golden hour at Bondi Beach!',
-      fact:'Bondi is one of the world’s most famous beaches. Always swim between the red and yellow flags, where lifesavers patrol.',
+      fact:'Bondi is one of the world’s most famous beaches. Lifesavers patrol between the red and yellow flags.',
       tip:'Tip: the Bondi to Coogee coastal walk is a highlight.' },
-    { name:'Darling Harbour Night', target:3400, traffic:1.7, bridges:1100, tint:'rgba(5,10,50,.55)', night:true, L:'#123a6b', R:'#1b5e20', sceneL:['boat','wave'], sceneR:['tower','tower','tree'],
+    { name:'The Rocks', L:'#2a6fb0', R:'#8d7b68', sceneL:['boat','wave'], sceneR:['house','house','tower'],
+      intro:'Through historic The Rocks!',
+      fact:'The Rocks is Sydney’s oldest area, first settled by Europeans in 1788. It has historic pubs, laneways and weekend markets.',
+      tip:'Tip: join a walking tour to learn the area’s history, including its Aboriginal heritage.' },
+    { name:'Darling Harbour Night', bridges:1100, tint:'rgba(5,10,50,.55)', night:true, L:'#123a6b', R:'#1b5e20', sceneL:['boat','wave'], sceneR:['tower','tower','tree'],
       intro:'Darling Harbour by night!',
-      fact:'Darling Harbour has restaurants, museums and an aquarium, and hosts regular fireworks and events.',
+      fact:'Darling Harbour has restaurants, museums and an aquarium, and hosts regular events and fireworks.',
       tip:'Tip: visit the Australian National Maritime Museum.' },
-    { name:'Opera House Grand Prix', target:4200, traffic:2.0, bridges:1000, tint:'rgba(5,5,40,.5)', night:true, L:'#0f3260', R:'#1b5e20', sceneL:['opera','boat','wave'], sceneR:['tower','tree'],
+    { name:'Blue Mountains', tint:'rgba(120,160,220,.22)', L:'#4a7fa8', R:'#2f6b3a', sceneL:['rock','tree','tree'], sceneR:['rock','tree','tree'],
+      intro:'Up into the Blue Mountains!',
+      fact:'The Blue Mountains are a UNESCO World Heritage area west of Sydney. The Three Sisters rock formation at Echo Point is the star attraction.',
+      tip:'Tip: stay on marked trails and carry plenty of water.' },
+    { name:'Anzac Bridge Storm', bridges:800, tint:'rgba(40,50,70,.5)', L:'#2d5d8a', R:'#4b5a4a', sceneL:['boat','wave'], sceneR:['tower','tower','house'],
+      intro:'Storm over Anzac Bridge — stay sharp!',
+      fact:'Anzac Bridge is a cable-stayed bridge that opened in 1995 and carries traffic towards the city.',
+      tip:'Tip: Sydney’s public transport (Opal card) is an easy, low-carbon way to get around.' },
+    { name:'Opera House Grand Prix', bridges:1000, tint:'rgba(5,5,40,.5)', night:true, L:'#0f3260', R:'#1b5e20', sceneL:['opera','boat','wave'], sceneR:['tower','tree'],
       intro:'The final race — Opera House lights!',
-      fact:'Every year the Vivid Sydney festival lights up the Opera House and city with art and music.',
+      fact:'Every year the Vivid Sydney festival lights up the Opera House and the city with art and music.',
       tip:'Tip: book Opera House tours ahead in peak season.' },
   ]
 },
 {
   id:'srilanka', name:'Sri Lanka', flag:'🇱🇰',
   cars:[
-    { name:'Tuk-Tuk',        color:'#fbc02d', max:10, steer:4.6, accel:.05,  w:30,h:46, style:'tuk' },
-    { name:'Classic Minor',  color:'#80cbc4', max:11.5,steer:4.6,accel:.055, w:34,h:60, style:'std' },
-    { name:'Safari Jeep',    color:'#8d6e63', max:12.5,steer:4.9,accel:.06,  w:38,h:62, style:'jeep' },
-    { name:'Hill Country Van',color:'#ef5350',max:13.5,steer:5.3,accel:.07,  w:38,h:66, style:'stripe' },
-    { name:'Island Racer',   color:'#ff6f00', max:15, steer:6.0, accel:.08,  w:36,h:62, style:'sport' },
+    { name:'Tuk-Tuk',         color:'#fbc02d', max:10,   steer:4.6, accel:.05,  w:30,h:46, style:'tuk',    need:0 },
+    { name:'Classic Minor',   color:'#80cbc4', max:11.5, steer:4.6, accel:.055, w:34,h:60, style:'std',    need:2 },
+    { name:'Safari Jeep',     color:'#8d6e63', max:12.5, steer:4.9, accel:.06,  w:38,h:62, style:'jeep',   need:4 },
+    { name:'Hill Country Van',color:'#ef5350', max:13.5, steer:5.3, accel:.07,  w:38,h:66, style:'stripe', need:6 },
+    { name:'Island Racer',    color:'#ff6f00', max:15,   steer:6.0, accel:.08,  w:36,h:62, style:'sport',  need:8 },
   ],
   stages:[
-    { name:'Colombo – Galle Face', target:1500, traffic:1.0, L:'#2f8fd8', R:'#3a7d44', sceneL:['wave','boat','wave'], sceneR:['lotus','palm','tower'],
+    { name:'Colombo – Galle Face', L:'#2f8fd8', R:'#3a7d44', sceneL:['wave','boat','wave'], sceneR:['lotus','palm','tower'],
       intro:'Welcome to Colombo, Sri Lanka!',
       fact:'Colombo is Sri Lanka’s commercial capital. Galle Face Green is a seafront promenade famous for sunsets, kite flying and street food, and the Lotus Tower is a city landmark.',
       tip:'Tip: explore the Pettah markets and the Gangaramaya Temple.' },
-    { name:'Kandy – Temple of the Tooth', target:2200, traffic:1.2, L:'#3f8f6a', R:'#2e7d32', sceneL:['stupa','palm','tree'], sceneR:['temple','palm','tree'],
+    { name:'Negombo Beach', L:'#2f8fd8', R:'#f0d9a0', sceneL:['boat','wave','boat'], sceneR:['palm','umbrella','palm'],
+      intro:'Fishing boats at Negombo!',
+      fact:'Negombo is a fishing town on the west coast, close to the main international airport. It is known for its lagoon, fish market and colourful fishing boats.',
+      tip:'Tip: buy seafood from local fishers and markets to support the community.' },
+    { name:'Kandy – Temple of the Tooth', L:'#3f8f6a', R:'#2e7d32', sceneL:['stupa','palm','tree'], sceneR:['temple','palm','tree'],
       intro:'Kandy – the cultural capital!',
       fact:'Kandy is a UNESCO World Heritage city. The Temple of the Sacred Tooth Relic is a major Buddhist pilgrimage site, and the Esala Perahera festival features decorated elephants and dancers.',
       tip:'Tip: dress modestly and remove shoes at temples.' },
-    { name:'Sigiriya – Lion Rock', target:2800, traffic:1.45, tint:'rgba(255,170,40,.18)', L:'#4f8f3a', R:'#3a7d44', sceneL:['palm','tree','elephant'], sceneR:['rock','tree','elephant'],
+    { name:'Anuradhapura', L:'#4f8f3a', R:'#3a7d44', sceneL:['stupa','tree','palm'], sceneR:['stupa','tree','temple'],
+      intro:'Ride into the ancient capital!',
+      fact:'Anuradhapura was Sri Lanka’s first ancient capital and is a UNESCO World Heritage site. Its Sri Maha Bodhi fig tree, grown from a cutting of the Buddha’s tree, was planted in the 3rd century BC.',
+      tip:'Tip: hire a local guide or rent a bicycle to explore the ruins.' },
+    { name:'Sigiriya – Lion Rock', tint:'rgba(255,170,40,.18)', L:'#4f8f3a', R:'#3a7d44', sceneL:['palm','tree','elephant'], sceneR:['rock','tree','elephant'],
       intro:'Race beneath Lion Rock!',
-      fact:'Sigiriya is a 5th-century rock fortress rising about 200 m from the jungle, a UNESCO World Heritage site known for its ancient frescoes and water gardens.',
+      fact:'Sigiriya is a 5th-century rock fortress rising about 200 m from the jungle, a UNESCO World Heritage site known for its frescoes and water gardens.',
       tip:'Tip: climb at sunrise to beat the heat and crowds.' },
-    { name:'Nuwara Eliya & Ella', target:3400, traffic:1.7, bridges:1100, bridge:'arch', tint:'rgba(200,225,235,.22)', L:'#6aa84f', R:'#38761d', sceneL:['tea','tea','tree'], sceneR:['tea','tea','house'],
+    { name:'Trincomalee Coast', L:'#1fa0c8', R:'#f0d9a0', sceneL:['wave','boat','wave'], sceneR:['palm','temple','umbrella'],
+      intro:'East coast blues at Trincomalee!',
+      fact:'Trincomalee has one of the world’s great natural deep-water harbours. Nearby Nilaveli beach and Pigeon Island National Park are popular for snorkelling.',
+      tip:'Tip: never touch or stand on coral when snorkelling.' },
+    { name:'Nuwara Eliya & Ella', bridges:1100, bridge:'arch', tint:'rgba(200,225,235,.22)', L:'#6aa84f', R:'#38761d', sceneL:['tea','tea','tree'], sceneR:['tea','tea','house'],
       intro:'Into the misty tea country!',
       fact:'Sri Lanka’s hill country grows world-famous Ceylon tea. Nuwara Eliya is nicknamed “Little England”, and the train from Kandy to Ella is one of the world’s most scenic rides, passing the Nine Arch Bridge.',
       tip:'Tip: buy tea direct from estates to support local growers.' },
-    { name:'Galle Fort & the South Coast', target:4200, traffic:2.0, tint:'rgba(255,110,40,.28)', L:'#1f77b4', R:'#f0d9a0', sceneL:['wave','boat','lighthouse'], sceneR:['palm','umbrella','temple'],
-      intro:'Sunset at Galle Fort!',
+    { name:'Yala Safari', bridges:0, tint:'rgba(255,190,60,.2)', L:'#7a8f3a', R:'#6b8f2f', sceneL:['elephant','tree','elephant'], sceneR:['elephant','tree','rock'],
+      intro:'Safari country — watch the road!',
+      fact:'Yala National Park is famous for its leopards and also shelters elephants, crocodiles and many birds. Wild animals have the right of way.',
+      tip:'Tip: stay inside the jeep, never feed wildlife, and choose operators that follow park rules.' },
+    { name:'Jaffna Peninsula', bridges:900, L:'#1f8fc0', R:'#c8b27a', sceneL:['wave','boat','boat'], sceneR:['temple','palm','house'],
+      intro:'Welcome to the far north — Jaffna!',
+      fact:'Jaffna in the north has its own distinct culture and cuisine. Jaffna Fort was built by the Portuguese in the 17th century, and the Nallur Kandaswamy temple is a major Hindu temple.',
+      tip:'Tip: try local dishes such as Jaffna crab curry at family-run restaurants.' },
+    { name:'Galle Fort & Mirissa', tint:'rgba(255,110,40,.28)', L:'#1f77b4', R:'#f0d9a0', sceneL:['wave','boat','lighthouse'], sceneR:['palm','umbrella','temple'],
+      intro:'Final race — sunset at Galle Fort!',
       fact:'Galle Fort, built by the Portuguese in the 16th century and expanded by the Dutch, is a UNESCO World Heritage site. Nearby Mirissa is a top spot for responsible whale watching.',
-      tip:'Tip: choose whale-watching operators that follow the distance guidelines, and keep a safe distance from wild elephants.' },
+      tip:'Tip: choose whale-watching operators that follow distance guidelines for the animals.' },
   ]
 }];
+const DIFFS=[['Easy','#43a047'],['Medium','#fb8c00'],['Hard','#e53935'],['Expert','#9c27b0']];
+// Difficulty ramps up with every stage: longer races, denser traffic, road hazards,
+// two-car walls, and fewer lives.
+WORLDS.forEach(w=>w.stages.forEach((s,i)=>{
+  s.diff = i<2?0 : i<5?1 : i<8?2 : 3;
+  s.target = 1500+i*500;
+  s.traffic = +(0.8+i*0.13).toFixed(2);
+  s.hazard = Math.max(0,i-2)*0.05;     // chance a spawn is a road hazard (cone)
+  s.dbl = Math.max(0,i-4)*0.07;        // chance two lanes are blocked together
+  s.lives = i<3?5:i<6?4:3;
+}));
 const coming = ['Melbourne','Kyoto','Cape Town'];
 
 /* ================= SAVE ================= */
@@ -117,7 +168,8 @@ const menu=document.getElementById('menu'), result=document.getElementById('resu
 const W=480,H=640,ROAD_X=90,ROAD_W=300,LANES=3,LANE_W=ROAD_W/LANES;
 let wi=Math.min(save.world|0,WORLDS.length-1), selStage=0;
 const WLD=()=>WORLDS[wi], done=()=>save.prog[WLD().id]|0;
-selStage=Math.min(done(),4);
+selStage=Math.min(done(),WLD().stages.length-1);
+for(const w of WORLDS){ if(WORLDS.indexOf(w)>=0 && w.cars[save.car[w.id]|0].need>(save.prog[w.id]|0)) save.car[w.id]=0; }
 
 function carPreview(def){
   const c=document.createElement('canvas'); c.width=64; c.height=44; c.className='mini';
@@ -130,17 +182,18 @@ function showMenu(){
   menu.insertAdjacentHTML('beforeend','<h1>🏎️ World Tour Race</h1><div class="sub">Race through famous places and discover them</div><h2>Choose destination</h2><div class="row" id="tabs"></div>');
   const tabs=menu.querySelector('#tabs');
   WORLDS.forEach((x,i)=>{ const t=document.createElement('div'); t.className='card tab'+(i===wi?' sel':''); t.textContent=`${x.flag} ${x.name}`;
-    t.onclick=()=>{ wi=i; save.world=i; persist(); selStage=Math.min(done(),4); showMenu(); }; tabs.appendChild(t); });
+    t.onclick=()=>{ wi=i; save.world=i; persist(); selStage=Math.min(done(),WLD().stages.length-1); showMenu(); }; tabs.appendChild(t); });
   menu.insertAdjacentHTML('beforeend','<h2>Stages</h2><div class="row" id="stg"></div><h2>Garage</h2><div class="row" id="gar"></div>');
   const stg=menu.querySelector('#stg'), gar=menu.querySelector('#gar');
   w.stages.forEach((s,i)=>{ const ok=i<=d, c=document.createElement('div');
     c.className='card stage'+(i===selStage?' sel':'')+(ok?'':' locked');
-    c.innerHTML=`<b>${ok?'':'🔒 '}${i+1}. ${s.name}</b>${s.target} m${i<4?` · unlocks ${w.cars[i+1].name}`:' · Final'}`;
+    const uc=w.cars.find(q=>q.need===i+1), dl=DIFFS[s.diff];
+    c.innerHTML=`<b>${ok?'':'🔒 '}${i+1}. ${s.name}</b><span style="color:${dl[1]};font-weight:700">${dl[0]}</span> · ${s.target} m${uc?` · unlocks ${uc.name}`:''}`;
     c.onclick=()=>{ if(ok){ selStage=i; showMenu(); } }; stg.appendChild(c); });
-  w.cars.forEach((cr,i)=>{ const ok=i<=d, c=document.createElement('div');
+  w.cars.forEach((cr,i)=>{ const ok=cr.need<=d, c=document.createElement('div');
     c.className='card'+(i===save.car[w.id]?' sel':'')+(ok?'':' locked');
     c.appendChild(carPreview(cr));
-    c.insertAdjacentHTML('beforeend',`<b>${cr.name}</b>${ok?`Top ${Math.round(cr.max*10)} km/h`:`🔒 Beat stage ${i}`}`);
+    c.insertAdjacentHTML('beforeend',`<b>${cr.name}</b>${ok?`Top ${Math.round(cr.max*10)} km/h`:`🔒 Beat stage ${cr.need}`}`);
     c.onclick=()=>{ if(ok){ save.car[w.id]=i; persist(); showMenu(); } }; gar.appendChild(c); });
   const go=document.createElement('button'); go.className='btn'; go.textContent=`Race: ${w.stages[selStage].name}`; go.onclick=startRace; menu.appendChild(go);
   menu.insertAdjacentHTML('beforeend',`<div class="sub" style="margin-top:10px">Coming soon: ${coming.join(' · ')}</div><div class="sub">← → steer · ↑ boost · ↓ brake · or drag on touch</div>`);
@@ -153,7 +206,7 @@ function startRace(){
   world=WLD(); stage=world.stages[selStage];
   const def=world.cars[save.car[world.id]|0];
   car={x:W/2-def.w/2,y:H-130,w:def.w,h:def.h,def};
-  enemies=[]; dist=0; speed=5; spawnT=30; lives=3; inv=0; offset=0; shake=0; introT=240; scen=[];
+  enemies=[]; dist=0; speed=5; spawnT=30; lives=stage.lives; inv=0; offset=0; shake=0; introT=240; scen=[];
   for(let y=-100;y<H;y+=110) addScenery(y);
   menu.classList.remove('on'); result.classList.remove('on'); state='play';
 }
@@ -163,6 +216,10 @@ function addScenery(y){
 }
 function paintCar(g,x,y,w,h,color,style){
   const wheel=(a,b)=>{ g.fillStyle='#000'; g.fillRect(a,b,6,16); };
+  if(style==='cone'){
+    g.fillStyle='#ff6d00'; g.beginPath(); g.moveTo(x+w/2,y); g.lineTo(x+w,y+h); g.lineTo(x,y+h); g.fill();
+    g.fillStyle='#fff'; g.fillRect(x+w/2-6,y+h*.45,12,4); return;
+  }
   if(style==='tuk'){
     g.fillStyle='#000'; g.fillRect(x+w/2-3,y+2,6,12); g.fillRect(x-3,y+h-18,6,14); g.fillRect(x+w-3,y+h-18,6,14);
     g.fillStyle=color; g.beginPath(); g.roundRect(x,y+8,w,h-8,8); g.fill();
@@ -201,11 +258,18 @@ function update(dt){
 
   spawnT-=dt;
   if(spawnT<=0){
-    const lane=Math.floor(Math.random()*LANES), r=Math.random(), sl=world.id==='srilanka';
-    const style=sl?(r<.45?'tuk':r<.65?'bus':'std'):'std';
-    const cols=sl?['#fbc02d','#e53935','#1e88e5','#43a047','#fff176','#ef6c00']:['#e53935','#43a047','#fdd835','#8e24aa','#fb8c00','#eceff1'];
-    const ew=style==='tuk'?30:style==='bus'?40:36, eh=style==='tuk'?46:style==='bus'?96:64;
-    enemies.push({x:ROAD_X+lane*LANE_W+(LANE_W-ew)/2,y:-eh-30,w:ew,h:eh,style,v:1+Math.random()*2.5,c:cols[(Math.random()*cols.length)|0]});
+    const sl=world.id==='srilanka';
+    const lanes=[0,1,2].sort(()=>Math.random()-.5);
+    const nLanes=Math.random()<stage.dbl?2:1;
+    if(Math.random()<stage.hazard){ // road works cone
+      const l=lanes[0]; enemies.push({x:ROAD_X+l*LANE_W+(LANE_W-24)/2,y:-60,w:24,h:24,style:'cone',v:2,c:'#ff6d00'});
+    } else for(let k=0;k<nLanes;k++){
+      const lane=lanes[k], r=Math.random();
+      const style=sl?(r<.45?'tuk':r<.65?'bus':'std'):'std';
+      const cols=sl?['#fbc02d','#e53935','#1e88e5','#43a047','#fff176','#ef6c00']:['#e53935','#43a047','#fdd835','#8e24aa','#fb8c00','#eceff1'];
+      const ew=style==='tuk'?30:style==='bus'?40:36, eh=style==='tuk'?46:style==='bus'?96:64;
+      enemies.push({x:ROAD_X+lane*LANE_W+(LANE_W-ew)/2,y:-eh-30,w:ew,h:eh,style,v:1+Math.random()*2.5,c:cols[(Math.random()*cols.length)|0]});
+    }
     spawnT=Math.max(18,(75-speed*3)/stage.traffic)*(.6+Math.random()*.8);
   }
   for(const e of enemies) e.y+=(speed-e.v+2)*dt;
@@ -223,10 +287,11 @@ function update(dt){
 function finish(win){
   state='end'; let html;
   if(win){
-    const id=world.id, first=selStage===(save.prog[id]|0)&&selStage<4;
+    const id=world.id, first=selStage===(save.prog[id]|0)&&selStage<world.stages.length;
     if(first){ save.prog[id]=selStage+1; persist(); }
-    const nc=first?world.cars[selStage+1]:null, last=selStage===4;
+    const nc=first?world.cars.find(q=>q.need===selStage+1):null, last=selStage===world.stages.length-1;
     html=`<h1>🏁 Stage Complete!</h1><div class="sub">${stage.name}</div>
+      <div class="sub" style="color:${DIFFS[stage.diff][1]}">${DIFFS[stage.diff][0]} level cleared</div>
       <h2>Did you know?</h2><div class="fact">${stage.fact}<br><b>${stage.tip}</b></div>
       ${nc?`<h2>New car unlocked</h2><div class="card sel"><b>${nc.name}</b>Top ${Math.round(nc.max*10)} km/h</div>`:''}
       ${last?`<div class="sub" style="margin-top:10px">You’ve conquered ${world.name}! Try another destination.</div>`:''}`;
@@ -312,7 +377,7 @@ function draw(){
     if(introT>0&&state==='play'){
       ctx.globalAlpha=Math.min(1,introT/40); ctx.fillStyle='rgba(0,0,0,.6)'; ctx.fillRect(20,90,W-40,70);
       ctx.fillStyle='#ffd54f'; ctx.textAlign='center'; ctx.font='bold 20px system-ui'; ctx.fillText(stage.intro,W/2,122);
-      ctx.fillStyle='#fff'; ctx.font='13px system-ui'; ctx.fillText(`${world.flag} ${stage.name} · ${stage.target} m`,W/2,146); ctx.globalAlpha=1;
+      ctx.fillStyle='#fff'; ctx.font='13px system-ui'; ctx.fillText(`${world.flag} ${stage.name} · ${DIFFS[stage.diff][0]} · ${stage.target} m`,W/2,146); ctx.globalAlpha=1;
     }
   }
 }
